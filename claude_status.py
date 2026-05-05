@@ -3831,7 +3831,22 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         except Exception:
             pass
 
-    # Model name from stdin context — compact "Opus 4.7" → "O4.7"
+    # Model + effort merged into one segment — "o4.7 - md".
+    # Family letter lowercased; effort is env-first, then settings.json fallback
+    # (Claude Code stores effortLevel in settings.json but doesn't export it).
+    def _get_effort_short():
+        effort = os.environ.get("CLAUDE_CODE_EFFORT_LEVEL", "")
+        if not effort or effort == "unset":
+            try:
+                with open(Path.home() / ".claude" / "settings.json", "r", encoding="utf-8") as f:
+                    effort = (json.load(f).get("effortLevel") or "")
+            except (FileNotFoundError, json.JSONDecodeError, OSError):
+                return ""
+        if not effort or effort == "unset":
+            return ""
+        effort = _sanitize(effort)
+        return {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh"}.get(effort, effort[:2])
+
     if stdin_ctx and show.get("model", True):
         model = stdin_ctx.get("model_name")
         if model:
@@ -3839,24 +3854,17 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             if model:
                 m_parts = model.split(maxsplit=1)
                 if len(m_parts) == 2 and m_parts[0]:
-                    model = m_parts[0][0] + m_parts[1]
+                    model = m_parts[0][0].lower() + m_parts[1]
+                if show.get("effort", True):
+                    es = _get_effort_short()
+                    if es:
+                        model = f"{model} - {es}"
                 parts.append((_pri("model"), model))
-
-    # Effort level — env var first, then ~/.claude/settings.json effortLevel
-    # Claude Code stores this in settings.json but doesn't export to subprocess env.
-    # Compact: low→lo, medium→md, high→hi, xhigh→xh
-    if show.get("effort", True):
-        effort = os.environ.get("CLAUDE_CODE_EFFORT_LEVEL", "")
-        if not effort or effort == "unset":
-            try:
-                with open(Path.home() / ".claude" / "settings.json", "r", encoding="utf-8") as f:
-                    effort = (json.load(f).get("effortLevel") or "")
-            except (FileNotFoundError, json.JSONDecodeError, OSError):
-                effort = ""
-        if effort and effort != "unset":
-            effort = _sanitize(effort)
-            effort_short = {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh"}.get(effort, effort[:2])
-            parts.append((_pri("effort"), effort_short))
+    elif show.get("effort", True):
+        # Model hidden but effort wanted — render effort standalone
+        es = _get_effort_short()
+        if es:
+            parts.append((_pri("effort"), es))
 
     # Worktree branch
     if stdin_ctx and show.get("worktree", True):
