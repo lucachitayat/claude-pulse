@@ -3535,10 +3535,6 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             if animate:
                 _check_threshold_flash("session", pct, anim_state)
                 session_flash = _get_flash_color("session", theme, anim_state)
-            # Match the SL bar fill to text_color so the whole SL segment reads
-            # as a single coloured cluster. Animation flash still overrides.
-            if session_flash is None:
-                session_flash = resolve_text_color(config) or None
             bar = make_bar(pct, theme, plain=bar_plain, width=bw, bar_style=bstyle,
                            anim_mode=anim_mode, flash_color=session_flash, config=config)
             reset = format_reset_time(five.get("resets_at")) if show.get("timer", True) else None
@@ -3557,7 +3553,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 parts.append((_s, f"{pct:.0f}%{pace_str} {bar}{reset_str}"))
             else:  # standard
                 history = _read_history() if show.get("sparkline", True) or show.get("runway", True) or show.get("status_message", True) or show.get("burn_rate", True) else []
-                label = f"{ORANGE_256}SL:{RESET}"
+                label = "SL:"
                 if show.get("status_message", True):
                     velocity = _compute_velocity(history)
                     msg, _ = _get_status_message(pct, velocity)
