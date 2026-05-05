@@ -68,6 +68,7 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 RED = "\033[31m"
 DIM = "\033[2m"
+BAR_EMPTY = "\033[38;5;244m"  # mid grey for unfilled bar slots — more legible than DIM
 RESET = "\033[0m"
 BOLD = "\033[1m"
 CYAN = "\033[36m"
@@ -1817,8 +1818,8 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
         bar_partial = gradient[partial] if partial else ""
         bar_empty = empty_char * empty
         if plain:
-            return f"{bar_fill}{bar_partial}{DIM}{bar_empty}{RESET}"
-        return f"{colour}{bar_fill}{bar_partial}{DIM}{bar_empty}{RESET}"
+            return f"{bar_fill}{bar_partial}{BAR_EMPTY}{bar_empty}{RESET}"
+        return f"{colour}{bar_fill}{bar_partial}{BAR_EMPTY}{bar_empty}{RESET}"
 
     # Standard binary fill
     fill_char, empty_char = BAR_STYLES.get(style, BAR_STYLES[DEFAULT_BAR_STYLE])
@@ -1827,7 +1828,7 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
         filled = 1  # any non-zero pct shows at least 1 cell
     filled = max(0, min(width, filled))
     if plain:
-        return f"{fill_char * filled}{DIM}{empty_char * (width - filled)}{RESET}"
+        return f"{fill_char * filled}{BAR_EMPTY}{empty_char * (width - filled)}{RESET}"
 
     # Pulse mode: bars cycle through vivid truecolor hues
     if anim_mode == "pulse" and not plain:
@@ -1851,7 +1852,7 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
         g = int(pulse_palette[idx][1] + (pulse_palette[nxt][1] - pulse_palette[idx][1]) * frac)
         b = int(pulse_palette[idx][2] + (pulse_palette[nxt][2] - pulse_palette[idx][2]) * frac)
         pulse_col = f"\033[38;2;{r};{g};{b}m"
-        return f"{pulse_col}{fill_char * filled}{DIM}{empty_char * (width - filled)}{RESET}"
+        return f"{pulse_col}{fill_char * filled}{BAR_EMPTY}{empty_char * (width - filled)}{RESET}"
 
     # Per-character animation (glow/shift)
     if anim_mode not in ("off", "rainbow", "pulse") and colour and not plain:
@@ -1861,10 +1862,10 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
             c = anim_col or colour
             chars.append(f"{c}{fill_char}{RESET}")
         for i in range(width - filled):
-            chars.append(f"{DIM}{empty_char}{RESET}")
+            chars.append(f"{BAR_EMPTY}{empty_char}{RESET}")
         return "".join(chars)
 
-    return f"{colour}{fill_char * filled}{DIM}{empty_char * (width - filled)}{RESET}"
+    return f"{colour}{fill_char * filled}{BAR_EMPTY}{empty_char * (width - filled)}{RESET}"
 
 
 # ---------------------------------------------------------------------------
