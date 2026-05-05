@@ -3804,7 +3804,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             a = int(la or 0)
             r = int(lr or 0)
             if a > 0 or r > 0:
-                parts.append((_pri("lines"), f"{BRIGHT_GREEN}+{a}{RESET} {BRIGHT_RED}-{r}{RESET}"))
+                parts.append((_pri("lines"), f"{BRIGHT_GREEN}+{a}{RESET}{BRIGHT_RED}-{r}{RESET}"))
 
     # Peak hours indicator
     is_peak, peak_str = _check_peak_hours(config)
