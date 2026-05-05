@@ -3536,7 +3536,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 parts.append((_s, f"{pct:.0f}%{pace_str} {bar}{reset_str}"))
             else:  # standard
                 history = _read_history() if show.get("sparkline", True) or show.get("runway", True) or show.get("status_message", True) or show.get("burn_rate", True) else []
-                label = f"{ORANGE_256}Limit{RESET}"
+                label = f"{ORANGE_256}SL:{RESET}"
                 if show.get("status_message", True):
                     velocity = _compute_velocity(history)
                     msg, _ = _get_status_message(pct, velocity)
