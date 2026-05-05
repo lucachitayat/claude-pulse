@@ -1817,9 +1817,14 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
         bar_fill = gradient[-1] * full
         bar_partial = gradient[partial] if partial else ""
         bar_empty = empty_char * empty
+        # Width=1 single-column: paint a dim grey BG behind the glyph so the
+        # cell's negative space reads as "remaining" while the braille dots
+        # render in the fill colour.
+        bg = "\033[48;5;236m" if width == 1 else ""
+        bg_off = "\033[49m" if bg else ""
         if plain:
-            return f"{bar_fill}{bar_partial}{BAR_EMPTY}{bar_empty}{RESET}"
-        return f"{colour}{bar_fill}{bar_partial}{BAR_EMPTY}{bar_empty}{RESET}"
+            return f"{bg}{bar_fill}{bar_partial}{BAR_EMPTY}{bar_empty}{bg_off}{RESET}"
+        return f"{bg}{colour}{bar_fill}{bar_partial}{BAR_EMPTY}{bar_empty}{bg_off}{RESET}"
 
     # Standard binary fill
     fill_char, empty_char = BAR_STYLES.get(style, BAR_STYLES[DEFAULT_BAR_STYLE])
@@ -3540,7 +3545,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             if animate:
                 _check_threshold_flash("session", pct, anim_state)
                 session_flash = _get_flash_color("session", theme, anim_state)
-            sl_bw = 1  # single braille glyph; gradient encodes the percentage
+            sl_bw = 1  # single column — gradient glyph encodes the percentage
             bar = make_bar(pct, theme, plain=bar_plain, width=sl_bw, bar_style=bstyle,
                            anim_mode=anim_mode, flash_color=session_flash, config=config)
             reset = format_reset_time(five.get("resets_at")) if show.get("timer", True) else None
@@ -3728,7 +3733,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
     if stdin_ctx and show.get("context", True):
         ctx_pct = stdin_ctx.get("context_pct")
         if ctx_pct is not None:
-            ctx_bw = 1  # single braille glyph; gradient encodes the percentage
+            ctx_bw = 1  # single column — gradient glyph encodes the percentage
             ctx_bar = make_bar(ctx_pct, theme, plain=bar_plain, width=ctx_bw, bar_style=bstyle,
                                anim_mode=anim_mode, config=config)
             ctx_fmt = config.get("context_format", "percent")
