@@ -1950,7 +1950,7 @@ def format_reset_time(resets_at_str):
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         if hours > 0:
-            return f"{hours}h {minutes:02d}m"
+            return f"{hours}h{minutes:02d}m"
         return f"{minutes}m"
     except (ValueError, TypeError):
         return None
@@ -3769,7 +3769,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 rate, code = _get_exchange_rate(currency)
                 total_local = total_usd * rate
                 sym = "$" if code == "USD" else currency
-                parts.append((_pri("weekly_cost"), f"{DIM}7d:{RESET} {sym}{total_local:,.2f}"))
+                parts.append((_pri("weekly_cost"), f"{DIM}7d:{RESET} {sym}{total_local:,.0f}"))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
             pass
 
