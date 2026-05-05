@@ -3898,7 +3898,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         tool_count = hook_state.get("tool_count", 0)
         frame_idx = int(time.time() * 4) % len(HEARTBEAT_SPINNER)
         spinner = HEARTBEAT_SPINNER[frame_idx]
-        parts.append((_pri("heartbeat"), f"[{spinner}] {tool_count} tools"))
+        parts.append((_pri("heartbeat"), f"[{spinner}] {tool_count} tc"))
 
     if show.get("activity", True) and hook_fresh:
         if hook_state.get("rapid_calls", 0) > 3:
