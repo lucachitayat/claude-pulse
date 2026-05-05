@@ -1249,7 +1249,24 @@ def check_for_update():
     if not remote:
         return None  # network error, skip silently
 
+    # Ancestry-based comparison so forks (origin != NoobyGains/claude-pulse)
+    # don't false-positive when local HEAD has customization commits on top
+    # of an already-integrated upstream commit. Falls back to raw inequality
+    # when the remote SHA isn't present locally (e.g. before `git fetch upstream`).
     update_available = local != remote
+    try:
+        repo_dir = Path(__file__).resolve().parent
+        rc = subprocess.run(
+            [_GIT_PATH, "merge-base", "--is-ancestor", remote, "HEAD"],
+            capture_output=True, timeout=3, cwd=str(repo_dir),
+        ).returncode
+        if rc == 0:
+            update_available = False
+        elif rc == 1:
+            update_available = True
+        # rc >= 2 → remote SHA missing locally; keep the inequality fallback
+    except Exception:
+        pass
 
     # Cache the result
     try:
