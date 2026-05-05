@@ -376,8 +376,9 @@ THEME_TEXT_DEFAULTS = {
 # Widget priorities — lower number = rendered first (leftmost).
 # Users can override via config["widget_priority"] = {"session": 1, "weekly": 2, ...}
 WIDGET_PRIORITY = {
+    "cwd": 2,
     "session": 10, "weekly": 20, "opus": 30, "sonnet": 40, "extra": 50,
-    "context": 60, "cost": 70, "cumulative_cost": 72, "lines": 75, "peak": 80, "plan": 90,
+    "context": 60, "cost": 70, "cumulative_cost": 72, "weekly_cost": 73, "lines": 75, "peak": 80, "plan": 90,
     "streak": 100, "model": 110, "effort": 120, "worktree": 130,
     "heartbeat": 140, "activity": 150, "last_tool": 160, "branch": 170,
     "sessions": 180, "pomodoro": 190, "git_drift": 200, "files_changed": 210,
@@ -412,6 +413,8 @@ DEFAULT_SHOW = {
     "lines": True,
     # Hidden by default — opt-in with --show
     "cumulative_cost": False,
+    "weekly_cost": False,
+    "cwd": False,
     "burn_rate": False,
     "sessions": False,
     "last_tool": False,
@@ -2726,6 +2729,129 @@ def _scan_session_costs():
     }
 
 
+_WEEKLY_COST_CACHE_TTL = 300  # 5 minutes
+_weekly_cost_mem = {"ts": 0, "data": {}}
+
+
+def _get_cached_weekly_cost(days=7):
+    """Return rolling N-day cost data with in-memory + 5-minute disk cache."""
+    now = time.time()
+
+    if now - _weekly_cost_mem["ts"] < _WEEKLY_COST_CACHE_TTL:
+        return _weekly_cost_mem["data"]
+
+    cache_path = get_state_dir() / "weekly_cost_cache.json"
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            cached = json.load(f)
+        if now - cached.get("timestamp", 0) < _WEEKLY_COST_CACHE_TTL and cached.get("days") == days:
+            _weekly_cost_mem["ts"] = now
+            _weekly_cost_mem["data"] = cached.get("data", {})
+            return _weekly_cost_mem["data"]
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+
+    data = _scan_session_costs_window(days * 86400)
+    _weekly_cost_mem["ts"] = now
+    _weekly_cost_mem["data"] = data
+    try:
+        _atomic_json_write(cache_path, {"timestamp": now, "days": days, "data": data}, indent=None)
+    except OSError:
+        pass
+    return data
+
+
+def _scan_session_costs_window(window_seconds):
+    """Sum API-equivalent costs for assistant entries within the last `window_seconds`.
+
+    Skips files whose mtime is older than the window. Within candidate files,
+    each entry's `timestamp` (ISO 8601, UTC) is checked against the cutoff.
+    """
+    home = Path.home()
+    projects_dir = home / ".claude" / "projects"
+    cutoff = time.time() - window_seconds
+    total_cost_usd = 0.0
+    total_tokens = 0
+
+    if not projects_dir.exists():
+        return {"total_cost_usd": 0.0, "total_tokens": 0, "window_seconds": window_seconds}
+
+    try:
+        jsonl_files = projects_dir.rglob("*.jsonl")
+    except (OSError, PermissionError):
+        jsonl_files = []
+
+    for jsonl_path in jsonl_files:
+        try:
+            mtime = jsonl_path.stat().st_mtime
+        except OSError:
+            continue
+        if mtime < cutoff:
+            continue
+
+        try:
+            with open(jsonl_path, "r", encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except (json.JSONDecodeError, ValueError):
+                        continue
+                    try:
+                        if entry.get("type") != "assistant":
+                            continue
+                        ts_str = entry.get("timestamp")
+                        if not ts_str:
+                            continue
+                        try:
+                            entry_ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).timestamp()
+                        except (ValueError, AttributeError):
+                            continue
+                        if entry_ts < cutoff:
+                            continue
+                        msg = entry.get("message", {})
+                        usage = msg.get("usage", {})
+                        if not usage or "input_tokens" not in usage:
+                            continue
+                        model_id = msg.get("model", "")
+                        pricing = API_PRICING.get(model_id)
+                        if pricing is None:
+                            for key in API_PRICING:
+                                if model_id.startswith(key):
+                                    pricing = API_PRICING[key]
+                                    model_id = key
+                                    break
+                        if pricing is None:
+                            continue
+
+                        inp = int(usage.get("input_tokens") or 0)
+                        out = int(usage.get("output_tokens") or 0)
+                        cr = int(usage.get("cache_read_input_tokens") or 0)
+                        cw = int(usage.get("cache_creation_input_tokens") or 0)
+
+                        cost = (
+                            inp * pricing["input"]
+                            + out * pricing["output"]
+                            + cr * pricing["cache_read"]
+                            + cw * pricing["cache_write"]
+                        ) / 1_000_000
+
+                        total_cost_usd += cost
+                        total_tokens += inp + out + cr + cw
+                    except (AttributeError, KeyError, TypeError, ValueError):
+                        continue
+        except (OSError, PermissionError):
+            continue
+
+    return {
+        "total_cost_usd": total_cost_usd,
+        "total_tokens": total_tokens,
+        "window_seconds": window_seconds,
+    }
+
+
 def cmd_stats():
     """Show full session stats summary."""
     stats = _load_stats()
@@ -2866,6 +2992,15 @@ def _parse_stdin_context(raw_stdin):
             result["lines_added"] = int(lines_added or 0)
             result["lines_removed"] = int(lines_removed or 0)
     except (AttributeError, KeyError, ValueError, TypeError):
+        pass
+
+    # Workspace current directory
+    try:
+        ws = data.get("data", data).get("workspace", {})
+        cwd_raw = ws.get("current_dir")
+        if cwd_raw:
+            result["cwd"] = _sanitize(cwd_raw)
+    except (AttributeError, KeyError):
         pass
 
     # Worktree (v2.1.69+)
@@ -3624,6 +3759,20 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
             pass
 
+    # Rolling 7-day API-equivalent cost (opt-in, off by default)
+    if show.get("weekly_cost", False):
+        try:
+            wcost_data = _get_cached_weekly_cost()
+            total_usd = wcost_data.get("total_cost_usd", 0.0)
+            if total_usd > 0:
+                currency = _sanitize(config.get("currency", "$"))[:5]
+                rate, code = _get_exchange_rate(currency)
+                total_local = total_usd * rate
+                sym = "$" if code == "USD" else currency
+                parts.append((_pri("weekly_cost"), f"{DIM}7d:{RESET} {sym}{total_local:,.2f}"))
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+            pass
+
     # Lines changed (from stdin cost data)
     if stdin_ctx and show.get("lines", True):
         la = stdin_ctx.get("lines_added")
@@ -3708,6 +3857,14 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             git_branch = _get_git_branch()
             if git_branch:
                 parts.append((_pri("branch"), git_branch))
+
+    # Workspace current directory (opt-in, off by default)
+    if stdin_ctx and show.get("cwd", False):
+        cwd_raw = stdin_ctx.get("cwd")
+        if cwd_raw:
+            home = str(Path.home())
+            display = ("~" + cwd_raw[len(home):]) if cwd_raw.startswith(home) else cwd_raw
+            parts.append((_pri("cwd"), display))
 
     if show.get("sessions", False):
         try:
