@@ -3538,7 +3538,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             bar = make_bar(pct, theme, plain=bar_plain, width=bw, bar_style=bstyle,
                            anim_mode=anim_mode, flash_color=session_flash, config=config)
             reset = format_reset_time(five.get("resets_at")) if show.get("timer", True) else None
-            reset_str = f" {reset}" if reset else ""
+            reset_str = f" — {reset}" if reset else ""
             pace_str = ""
             if show.get("pace"):
                 pace = _calc_pace_pct(five.get("resets_at"), 18000)
@@ -3574,7 +3574,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     burn_str = f" {br}" if br else ""
                 if reset_str and (runway_str or spark_str or burn_str):
                     reset_str = f" \u00b7{reset}"
-                parts.append((_s, f"{label} {bar} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{reset_str}"))
+                parts.append((_s, f"{label} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{reset_str}"))
         else:
             _s = _pri("session")
             bar = make_bar(0, theme, plain=bar_plain, width=bw, bar_style=bstyle)
