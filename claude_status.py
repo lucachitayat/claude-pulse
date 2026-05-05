@@ -3819,9 +3819,17 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     model = m_parts[0][0] + m_parts[1]
                 parts.append((_pri("model"), model))
 
-    # Effort level — compact: low→lo, medium→md, high→hi, xhigh→xh
+    # Effort level — env var first, then ~/.claude/settings.json effortLevel
+    # Claude Code stores this in settings.json but doesn't export to subprocess env.
+    # Compact: low→lo, medium→md, high→hi, xhigh→xh
     if show.get("effort", True):
         effort = os.environ.get("CLAUDE_CODE_EFFORT_LEVEL", "")
+        if not effort or effort == "unset":
+            try:
+                with open(Path.home() / ".claude" / "settings.json", "r", encoding="utf-8") as f:
+                    effort = (json.load(f).get("effortLevel") or "")
+            except (FileNotFoundError, json.JSONDecodeError, OSError):
+                effort = ""
         if effort and effort != "unset":
             effort = _sanitize(effort)
             effort_short = {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh"}.get(effort, effort[:2])
