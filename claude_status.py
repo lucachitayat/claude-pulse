@@ -3565,11 +3565,11 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     pace_str = f" ({pace:.0f}%)"
             _s = _pri("session")
             if layout == "compact":
-                parts.append((_s, f"S {bar} {pct:.0f}%{pace_str}{reset_str}"))
+                parts.append((_s, "session", f"S {bar} {pct:.0f}%{pace_str}{reset_str}"))
             elif layout == "minimal":
-                parts.append((_s, f"{bar} {pct:.0f}%{pace_str}{reset_str}"))
+                parts.append((_s, "session", f"{bar} {pct:.0f}%{pace_str}{reset_str}"))
             elif layout == "percent-first":
-                parts.append((_s, f"{pct:.0f}%{pace_str} {bar}{reset_str}"))
+                parts.append((_s, "session", f"{pct:.0f}%{pace_str} {bar}{reset_str}"))
             else:  # standard
                 history = _read_history() if show.get("sparkline", True) or show.get("runway", True) or show.get("status_message", True) or show.get("burn_rate", True) else []
                 label = "SL:"
@@ -3595,18 +3595,18 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     reset_str = f" \u00b7{reset}"
                 sc = section_threshold_colour(pct, theme)
                 ec = RESET if sc else ""
-                parts.append((_s, f"{sc}{label} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{ec} {bar}{sc}{reset_str}{ec}"))
+                parts.append((_s, "session", f"{sc}{label} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{ec} {bar}{sc}{reset_str}{ec}"))
         else:
             _s = _pri("session")
             bar = make_bar(0, theme, plain=bar_plain, width=bw, bar_style=bstyle)
             if layout == "compact":
-                parts.append((_s, f"S {bar} 0%"))
+                parts.append((_s, "session", f"S {bar} 0%"))
             elif layout == "minimal":
-                parts.append((_s, f"{bar} 0%"))
+                parts.append((_s, "session", f"{bar} 0%"))
             elif layout == "percent-first":
-                parts.append((_s, f"0% {bar}"))
+                parts.append((_s, "session", f"0% {bar}"))
             else:
-                parts.append((_s, f"Session {bar} 0%"))
+                parts.append((_s, "session", f"Session {bar} 0%"))
 
     # Weekly Limit (7-day all models)
     if show.get("weekly", True):
@@ -3641,15 +3641,15 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             _w = _pri("weekly")
             if celebrating:
                 celeb_label = _render_celebration_label(config)
-                parts.append((_w, f"{celeb_label} {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
+                parts.append((_w, "weekly", f"{celeb_label} {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
             elif layout == "compact":
-                parts.append((_w, f"W {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
+                parts.append((_w, "weekly", f"W {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
             elif layout == "minimal":
-                parts.append((_w, f"{bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
+                parts.append((_w, "weekly", f"{bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
             elif layout == "percent-first":
-                parts.append((_w, f"{pct:.0f}%{pace_str} {bar}{weekly_reset_str}"))
+                parts.append((_w, "weekly", f"{pct:.0f}%{pace_str} {bar}{weekly_reset_str}"))
             else:
-                parts.append((_w, f"Weekly {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
+                parts.append((_w, "weekly", f"Weekly {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
 
     # Opus weekly limit
     if show.get("opus", True):
@@ -3659,13 +3659,13 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             bar = make_bar(pct, theme, plain=bar_plain, width=bw, bar_style=bstyle)
             _o = _pri("opus")
             if layout == "compact":
-                parts.append((_o, f"O {bar} {pct:.0f}%"))
+                parts.append((_o, "opus", f"O {bar} {pct:.0f}%"))
             elif layout == "minimal":
-                parts.append((_o, f"{bar} {pct:.0f}%"))
+                parts.append((_o, "opus", f"{bar} {pct:.0f}%"))
             elif layout == "percent-first":
-                parts.append((_o, f"{pct:.0f}% {bar}"))
+                parts.append((_o, "opus", f"{pct:.0f}% {bar}"))
             else:
-                parts.append((_o, f"Opus {bar} {pct:.0f}%"))
+                parts.append((_o, "opus", f"Opus {bar} {pct:.0f}%"))
 
     # Sonnet weekly limit
     if show.get("sonnet", True):
@@ -3680,24 +3680,24 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     pace_str = f" ({pace:.0f}%)"
             _sn = _pri("sonnet")
             if layout == "compact":
-                parts.append((_sn, f"S {bar} {pct:.0f}%{pace_str}"))
+                parts.append((_sn, "sonnet", f"S {bar} {pct:.0f}%{pace_str}"))
             elif layout == "minimal":
-                parts.append((_sn, f"{bar} {pct:.0f}%{pace_str}"))
+                parts.append((_sn, "sonnet", f"{bar} {pct:.0f}%{pace_str}"))
             elif layout == "percent-first":
-                parts.append((_sn, f"{pct:.0f}%{pace_str} {bar}"))
+                parts.append((_sn, "sonnet", f"{pct:.0f}%{pace_str} {bar}"))
             else:
-                parts.append((_sn, f"Sonnet {bar} {pct:.0f}%{pace_str}"))
+                parts.append((_sn, "sonnet", f"Sonnet {bar} {pct:.0f}%{pace_str}"))
         else:
             bar = make_bar(0, theme, plain=bar_plain, width=bw, bar_style=bstyle)
             _sn = _pri("sonnet")
             if layout == "compact":
-                parts.append((_sn, f"S {bar} 0%"))
+                parts.append((_sn, "sonnet", f"S {bar} 0%"))
             elif layout == "minimal":
-                parts.append((_sn, f"{bar} 0%"))
+                parts.append((_sn, "sonnet", f"{bar} 0%"))
             elif layout == "percent-first":
-                parts.append((_sn, f"0% {bar}"))
+                parts.append((_sn, "sonnet", f"0% {bar}"))
             else:
-                parts.append((_sn, f"Sonnet {bar} 0%"))
+                parts.append((_sn, "sonnet", f"Sonnet {bar} 0%"))
 
     # Extra usage (bonus/gifted credits)
     extra = usage.get("extra_usage")
@@ -3716,28 +3716,28 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 extra_display = "amount" if limit == 0 else "full"
             if extra_display == "amount":
                 if layout == "compact":
-                    parts.append((_e, f"E {currency}{used:.2f}"))
+                    parts.append((_e, "extra", f"E {currency}{used:.2f}"))
                 elif layout == "minimal":
-                    parts.append((_e, f"{currency}{used:.2f}"))
+                    parts.append((_e, "extra", f"{currency}{used:.2f}"))
                 else:
-                    parts.append((_e, f"Extra {currency}{used:.2f}"))
+                    parts.append((_e, "extra", f"Extra {currency}{used:.2f}"))
             else:
                 bar = make_bar(pct, theme, plain=bar_plain, width=bw, bar_style=bstyle)
                 if layout == "compact":
-                    parts.append((_e, f"E {bar} {currency}{used:.2f}/{currency}{limit:.2f}"))
+                    parts.append((_e, "extra", f"E {bar} {currency}{used:.2f}/{currency}{limit:.2f}"))
                 elif layout == "minimal":
-                    parts.append((_e, f"{bar} {currency}{used:.2f}"))
+                    parts.append((_e, "extra", f"{bar} {currency}{used:.2f}"))
                 elif layout == "percent-first":
-                    parts.append((_e, f"{currency}{used:.2f} {bar}"))
+                    parts.append((_e, "extra", f"{currency}{used:.2f} {bar}"))
                 else:
-                    parts.append((_e, f"Extra {bar} {currency}{used:.2f}/{currency}{limit:.2f}"))
+                    parts.append((_e, "extra", f"Extra {bar} {currency}{used:.2f}/{currency}{limit:.2f}"))
         elif extra_enabled_by_user:
             if layout == "minimal":
-                parts.append((_e, "n/a"))
+                parts.append((_e, "extra", "n/a"))
             elif layout == "compact":
-                parts.append((_e, "E: n/a"))
+                parts.append((_e, "extra", "E: n/a"))
             else:
-                parts.append((_e, "Extra: n/a"))
+                parts.append((_e, "extra", "Extra: n/a"))
 
     # Context window usage from stdin context (with pressure warning)
     if stdin_ctx and show.get("context", True):
@@ -3767,24 +3767,24 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             _cx = _pri("context")
             if layout == "compact":
                 prefix = f"\u26a0 C" if ctx_warning_label else "C"
-                parts.append((_cx, f"{prefix} {ctx_bar} {pct_label}{ctx_warning_suffix}"))
+                parts.append((_cx, "context", f"{prefix} {ctx_bar} {pct_label}{ctx_warning_suffix}"))
             elif layout == "minimal":
-                parts.append((_cx, f"{ctx_bar} {pct_label}{ctx_warning_suffix}"))
+                parts.append((_cx, "context", f"{ctx_bar} {pct_label}{ctx_warning_suffix}"))
             elif layout == "percent-first":
-                parts.append((_cx, f"{pct_label}{ctx_warning_suffix} {ctx_bar}"))
+                parts.append((_cx, "context", f"{pct_label}{ctx_warning_suffix} {ctx_bar}"))
             else:
                 cx_sc = section_threshold_colour(ctx_pct, theme)
                 cx_ec = RESET if cx_sc else ""
                 if ctx_warning_label:
-                    parts.append((_cx, f"{ctx_warning_label} {ctx_bar} {cx_sc}{pct_label}{cx_ec}{ctx_warning_suffix}"))
+                    parts.append((_cx, "context", f"{ctx_warning_label} {ctx_bar} {cx_sc}{pct_label}{cx_ec}{ctx_warning_suffix}"))
                 else:
-                    parts.append((_cx, f"{cx_sc}Ctx{cx_ec} {ctx_bar} {cx_sc}{pct_label}{cx_ec}"))
+                    parts.append((_cx, "context", f"{cx_sc}Ctx{cx_ec} {ctx_bar} {cx_sc}{pct_label}{cx_ec}"))
 
     # Cost ticker
     if stdin_ctx and show.get("cost", True):
         cost_str = _format_cost(stdin_ctx, config)
         if cost_str:
-            parts.append((_pri("cost"), cost_str))
+            parts.append((_pri("cost"), "cost", cost_str))
 
     # Cumulative API-equivalent cost (opt-in, off by default)
     if show.get("cumulative_cost", False):
@@ -3796,7 +3796,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 rate, code = _get_exchange_rate(currency)
                 total_local = total_usd * rate
                 sym = "$" if code == "USD" else currency
-                parts.append((_pri("cumulative_cost"), f"{DIM}All:{RESET} {sym}{total_local:,.2f}"))
+                parts.append((_pri("cumulative_cost"), "cumulative_cost", f"{DIM}All:{RESET} {sym}{total_local:,.2f}"))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
             pass
 
@@ -3810,7 +3810,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 rate, code = _get_exchange_rate(currency)
                 total_local = total_usd * rate
                 sym = "$" if code == "USD" else currency
-                parts.append((_pri("weekly_cost"), f"{sym}{total_local:,.0f}"))
+                parts.append((_pri("weekly_cost"), "weekly_cost", f"{sym}{total_local:,.0f}"))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
             pass
 
@@ -3822,22 +3822,22 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             a = int(la or 0)
             r = int(lr or 0)
             if a > 0 or r > 0:
-                parts.append((_pri("lines"), f"{BRIGHT_GREEN}+{a}{RESET}{BRIGHT_RED}-{r}{RESET}"))
+                parts.append((_pri("lines"), "lines", f"{BRIGHT_GREEN}+{a}{RESET}{BRIGHT_RED}-{r}{RESET}"))
 
     # Peak hours indicator
     is_peak, peak_str = _check_peak_hours(config)
     if peak_str:
         _pk = _pri("peak")
         if is_peak:
-            parts.append((_pk, f"{RED}{peak_str}{RESET}"))
+            parts.append((_pk, "peak", f"{RED}{peak_str}{RESET}"))
         elif "in " in peak_str:
-            parts.append((_pk, f"{YELLOW}{peak_str}{RESET}"))
+            parts.append((_pk, "peak", f"{YELLOW}{peak_str}{RESET}"))
         else:
-            parts.append((_pk, f"{GREEN}{peak_str}{RESET}"))
+            parts.append((_pk, "peak", f"{GREEN}{peak_str}{RESET}"))
 
     # Plan name (hidden in minimal layout)
     if layout != "minimal" and show.get("plan", True) and plan:
-        parts.append((_pri("plan"), _sanitize(plan)))
+        parts.append((_pri("plan"), "plan", _sanitize(plan)))
 
     # Streak display
     if show.get("streak", True):
@@ -3845,7 +3845,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             stats = _load_stats()
             sd = _get_streak_display(config, stats)
             if sd:
-                parts.append((_pri("streak"), sd))
+                parts.append((_pri("streak"), "streak", sd))
         except Exception:
             pass
 
@@ -3877,18 +3877,18 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     es = _get_effort_short()
                     if es:
                         model = f"{model}-{es}"
-                parts.append((_pri("model"), model))
+                parts.append((_pri("model"), "model", model))
     elif show.get("effort", True):
         # Model hidden but effort wanted — render effort standalone
         es = _get_effort_short()
         if es:
-            parts.append((_pri("effort"), es))
+            parts.append((_pri("effort"), "effort", es))
 
     # Worktree branch
     if stdin_ctx and show.get("worktree", True):
         wt_branch = stdin_ctx.get("worktree_branch")
         if wt_branch:
-            parts.append((_pri("worktree"), wt_branch))
+            parts.append((_pri("worktree"), "worktree", wt_branch))
 
     # --- Hook-based live features ---
     hook_state = _read_hook_state()
@@ -3898,38 +3898,56 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         tool_count = hook_state.get("tool_count", 0)
         frame_idx = int(time.time() * 4) % len(HEARTBEAT_SPINNER)
         spinner = HEARTBEAT_SPINNER[frame_idx]
-        parts.append((_pri("heartbeat"), f"[{spinner}] {tool_count} tc"))
+        parts.append((_pri("heartbeat"), "heartbeat", f"[{spinner}] {tool_count} tc"))
 
     if show.get("activity", True) and hook_fresh:
         if hook_state.get("rapid_calls", 0) > 3:
-            parts.append((_pri("activity"), f"\u26a1 Active"))
+            parts.append((_pri("activity"), "activity", f"\u26a1 Active"))
 
     if show.get("last_tool", False) and hook_fresh:
         last_tool = hook_state.get("last_tool", "")
         if last_tool:
-            parts.append((_pri("last_tool"), f"Last: {last_tool[:12]}"))
+            parts.append((_pri("last_tool"), "last_tool", f"Last: {last_tool[:12]}"))
 
     if show.get("branch", True):
         worktree_shown = stdin_ctx and show.get("worktree", True) and stdin_ctx.get("worktree_branch")
         if not worktree_shown:
             git_branch = _get_git_branch()
             if git_branch:
-                parts.append((_pri("branch"), git_branch))
+                parts.append((_pri("branch"), "branch", git_branch))
 
-    # Workspace current directory (opt-in, off by default)
+    # Workspace current directory (opt-in, off by default).
+    # Smart-shorten: ~/code/<project>/.claude/worktrees/<id> → <project>/<id>;
+    # ~/code/<project>/<rest> → <project>/<basename(rest)>; otherwise ~-shortened
+    # full path. Keeps line 2 readable without burying the actual context.
     if stdin_ctx and show.get("cwd", False):
         cwd_raw = stdin_ctx.get("cwd")
         if cwd_raw:
             home = str(Path.home())
-            display = ("~" + cwd_raw[len(home):]) if cwd_raw.startswith(home) else cwd_raw
-            parts.append((_pri("cwd"), display))
+            # Worktrees: ~/code/<...nested...>/<repo>/.claude/worktrees/<id>
+            #   → <repo>/<id> (basename of the dir before .claude/worktrees/)
+            # Repo paths: ~/code/<...nested...>/<repo>
+            #   → <repo> (basename only)
+            # Otherwise: ~-shortened full path.
+            wt_match = re.match(rf"^{re.escape(home)}/code/(.+?)/\.claude/worktrees/([^/]+)", cwd_raw)
+            code_match = re.match(rf"^{re.escape(home)}/code/(.+?)/?$", cwd_raw)
+            if wt_match:
+                repo = Path(wt_match.group(1)).name
+                display = f"{repo}/{wt_match.group(2)}"
+            elif code_match:
+                display = Path(code_match.group(1)).name
+            elif cwd_raw.startswith(home):
+                display = "~" + cwd_raw[len(home):]
+            else:
+                display = cwd_raw
+            parts.append((_pri("cwd"), "cwd", display))
 
     if show.get("sessions", False):
         try:
             other_sessions = _get_active_sessions()
             if other_sessions:
                 count = len(other_sessions)
-                parts.append((_pri("sessions"), f"+{count} session{'s' if count != 1 else ''}"))
+                parts.append((_pri("sessions"), "sessions", f"+{count} session{'s' if count != 1 else ''}"))
         except Exception:
             pass
 
@@ -3939,7 +3957,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             if pomo and pomo.get("active"):
                 pomo_str = _render_pomodoro(pomo, theme, bar_width=min(bw, 8))
                 if pomo_str:
-                    parts.append((_pri("pomodoro"), pomo_str))
+                    parts.append((_pri("pomodoro"), "pomodoro", pomo_str))
         except Exception:
             pass
 
@@ -3947,7 +3965,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         try:
             drift_str = _render_git_drift()
             if drift_str:
-                parts.append((_pri("git_drift"), drift_str))
+                parts.append((_pri("git_drift"), "git_drift", drift_str))
         except Exception:
             pass
 
@@ -3955,13 +3973,32 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         try:
             files_str = _render_files_changed()
             if files_str:
-                parts.append((_pri("files_changed"), files_str))
+                parts.append((_pri("files_changed"), "files_changed", files_str))
         except Exception:
             pass
 
-    # Sort widgets by priority, then join
+    # Sort widgets by priority
     parts.sort(key=lambda x: x[0])
-    line = " | ".join(p[1] for p in parts)
+
+    # Two-line layout: partition by `line2_widgets` config list. Kill switch
+    # CLAUDE_PULSE_FORCE_SINGLE_LINE collapses everything into row1 (preserves
+    # all content, no \n). The subprocess inherits Claude Code's launch env;
+    # setting the var mid-session has no effect unless exported in shell rc
+    # and Claude Code is restarted.
+    line2_ids = set(config.get("line2_widgets", []) or []) if config else set()
+    if os.environ.get("CLAUDE_PULSE_FORCE_SINGLE_LINE"):
+        line2_ids = set()
+    if line2_ids:
+        row1 = " | ".join(p[2] for p in parts if p[1] not in line2_ids)
+        row2 = " | ".join(p[2] for p in parts if p[1] in line2_ids)
+        if row1 and row2:
+            line = f"{row1}\n{row2}"
+        elif row2:
+            line = row2
+        else:
+            line = row1
+    else:
+        line = " | ".join(p[2] for p in parts)
 
     # Staleness indicator
     if show.get("staleness", True) and cache_age is not None:
@@ -4084,7 +4121,15 @@ def _wrap_line(line, config):
 
 
 def _fit_line(line, config):
-    """Apply wrap or truncate depending on the user's --wrap setting."""
+    """Apply wrap or truncate depending on the user's --wrap setting.
+
+    Handles multi-line output (line2_widgets) by splitting on \\n, fitting
+    each row independently, and rejoining. Without this, _truncate_line
+    counts visible chars across the embedded newline and clips mid-row2.
+    """
+    if "\n" in line:
+        rows = [_fit_line(r, config) for r in line.split("\n")]
+        return "\n".join(rows)
     if config.get("wrap") == "auto":
         return _wrap_line(line, config)
     return _truncate_line(line, config)
