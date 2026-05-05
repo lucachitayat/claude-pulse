@@ -3808,20 +3808,23 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         except Exception:
             pass
 
-    # Model name from stdin context
+    # Model name from stdin context — compact "Opus 4.7" → "O4.7"
     if stdin_ctx and show.get("model", True):
         model = stdin_ctx.get("model_name")
         if model:
             model = re.sub(r'\s*\([^)]*context[^)]*\)', '', model).strip()
             if model:
+                m_parts = model.split(maxsplit=1)
+                if len(m_parts) == 2 and m_parts[0]:
+                    model = m_parts[0][0] + m_parts[1]
                 parts.append((_pri("model"), model))
 
-    # Effort level
+    # Effort level — compact: low→lo, medium→md, high→hi, xhigh→xh
     if show.get("effort", True):
         effort = os.environ.get("CLAUDE_CODE_EFFORT_LEVEL", "")
         if effort and effort != "unset":
             effort = _sanitize(effort)
-            effort_short = {"medium": "med"}.get(effort, effort)
+            effort_short = {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh"}.get(effort, effort[:2])
             parts.append((_pri("effort"), effort_short))
 
     # Worktree branch
