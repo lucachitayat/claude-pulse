@@ -1807,6 +1807,8 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
         levels = len(gradient) - 1
         total_steps = width * levels
         filled_steps = round(pct / 100 * total_steps)
+        if pct > 0 and filled_steps == 0:
+            filled_steps = 1  # any non-zero pct shows at least 1 sub-step
         filled_steps = max(0, min(total_steps, filled_steps))
         full = filled_steps // levels
         partial = filled_steps % levels
@@ -1821,6 +1823,8 @@ def make_bar(pct, theme=None, plain=False, width=None, bar_style=None,
     # Standard binary fill
     fill_char, empty_char = BAR_STYLES.get(style, BAR_STYLES[DEFAULT_BAR_STYLE])
     filled = round(pct / 100 * width)
+    if pct > 0 and filled == 0:
+        filled = 1  # any non-zero pct shows at least 1 cell
     filled = max(0, min(width, filled))
     if plain:
         return f"{fill_char * filled}{DIM}{empty_char * (width - filled)}{RESET}"
