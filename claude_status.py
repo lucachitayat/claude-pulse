@@ -2253,8 +2253,8 @@ def _format_cost(stdin_ctx, config):
     rate, code = _get_exchange_rate(currency)
     converted = cost_val * rate
     if code == "USD":
-        return f"${converted:.2f}"
-    return f"{currency}{converted:.2f}"
+        return f"${converted:.1f}"
+    return f"{currency}{converted:.1f}"
 
 
 def _get_context_history_path():
