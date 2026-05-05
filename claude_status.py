@@ -3540,7 +3540,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             if animate:
                 _check_threshold_flash("session", pct, anim_state)
                 session_flash = _get_flash_color("session", theme, anim_state)
-            sl_bw = max(2, bw // 2)  # half-width to match Ctx bar
+            sl_bw = 1  # single braille glyph; gradient encodes the percentage
             bar = make_bar(pct, theme, plain=bar_plain, width=sl_bw, bar_style=bstyle,
                            anim_mode=anim_mode, flash_color=session_flash, config=config)
             reset = format_reset_time(five.get("resets_at")) if show.get("timer", True) else None
@@ -3728,7 +3728,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
     if stdin_ctx and show.get("context", True):
         ctx_pct = stdin_ctx.get("context_pct")
         if ctx_pct is not None:
-            ctx_bw = max(2, bw // 2)  # half-width vs other bars
+            ctx_bw = 1  # single braille glyph; gradient encodes the percentage
             ctx_bar = make_bar(ctx_pct, theme, plain=bar_plain, width=ctx_bw, bar_style=bstyle,
                                anim_mode=anim_mode, config=config)
             ctx_fmt = config.get("context_format", "percent")
