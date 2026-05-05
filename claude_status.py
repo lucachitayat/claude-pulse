@@ -1769,6 +1769,19 @@ def bar_colour(pct, theme):
     return theme["low"]
 
 
+def section_threshold_colour(pct, theme):
+    """Return ANSI colour for a whole section's text at default thresholds.
+
+    Empty string under 50% so the section falls back to the global text_color
+    set by apply_text_color. Caller is responsible for emitting RESET after.
+    """
+    if pct >= 80:
+        return theme["high"]
+    if pct >= 50:
+        return theme["mid"]
+    return ""
+
+
 def _fmt_tokens(n):
     """Format token count: 200000 -> '200k', 1000000 -> '1M', 1B -> '1B'."""
     if n >= 1_000_000_000:
@@ -3580,7 +3593,9 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     burn_str = f" {br}" if br else ""
                 if reset_str and (runway_str or spark_str or burn_str):
                     reset_str = f" \u00b7{reset}"
-                parts.append((_s, f"{label} {pct:.0f}% {bar}{burn_str}{pace_str}{spark_str}{runway_str}{reset_str}"))
+                sc = section_threshold_colour(pct, theme)
+                ec = RESET if sc else ""
+                parts.append((_s, f"{sc}{label} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{ec} {bar}{sc}{reset_str}{ec}"))
         else:
             _s = _pri("session")
             bar = make_bar(0, theme, plain=bar_plain, width=bw, bar_style=bstyle)
@@ -3758,10 +3773,12 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             elif layout == "percent-first":
                 parts.append((_cx, f"{pct_label}{ctx_warning_suffix} {ctx_bar}"))
             else:
+                cx_sc = section_threshold_colour(ctx_pct, theme)
+                cx_ec = RESET if cx_sc else ""
                 if ctx_warning_label:
-                    parts.append((_cx, f"{ctx_warning_label} {ctx_bar} {pct_label}{ctx_warning_suffix}"))
+                    parts.append((_cx, f"{ctx_warning_label} {ctx_bar} {cx_sc}{pct_label}{cx_ec}{ctx_warning_suffix}"))
                 else:
-                    parts.append((_cx, f"Ctx {ctx_bar} {pct_label}"))
+                    parts.append((_cx, f"{cx_sc}Ctx{cx_ec} {ctx_bar} {cx_sc}{pct_label}{cx_ec}"))
 
     # Cost ticker
     if stdin_ctx and show.get("cost", True):
