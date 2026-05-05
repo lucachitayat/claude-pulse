@@ -3722,7 +3722,8 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
     if stdin_ctx and show.get("context", True):
         ctx_pct = stdin_ctx.get("context_pct")
         if ctx_pct is not None:
-            ctx_bar = make_bar(ctx_pct, theme, plain=bar_plain, width=bw, bar_style=bstyle,
+            ctx_bw = max(2, bw // 2)  # half-width vs other bars
+            ctx_bar = make_bar(ctx_pct, theme, plain=bar_plain, width=ctx_bw, bar_style=bstyle,
                                anim_mode=anim_mode, config=config)
             ctx_fmt = config.get("context_format", "percent")
             ctx_used = stdin_ctx.get("context_used")
