@@ -3858,7 +3858,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 if show.get("effort", True):
                     es = _get_effort_short()
                     if es:
-                        model = f"{model} - {es}"
+                        model = f"{model}-{es}"
                 parts.append((_pri("model"), model))
     elif show.get("effort", True):
         # Model hidden but effort wanted — render effort standalone
