@@ -3980,25 +3980,34 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
     # Sort widgets by priority
     parts.sort(key=lambda x: x[0])
 
-    # Two-line layout: partition by `line2_widgets` config list. Kill switch
-    # CLAUDE_PULSE_FORCE_SINGLE_LINE collapses everything into row1 (preserves
+    # Two-line layout: partition parts by config-driven widget IDs.
+    #   line1_widgets — allowlist for row 1 (everything else flows to row 2)
+    #   line2_widgets — explicit list pushed to row 2 (rest stays on row 1)
+    # If both are set, line1_widgets wins. Kill switch
+    # CLAUDE_PULSE_FORCE_SINGLE_LINE collapses everything into row 1 (preserves
     # all content, no \n). The subprocess inherits Claude Code's launch env;
     # setting the var mid-session has no effect unless exported in shell rc
     # and Claude Code is restarted.
+    line1_ids = set(config.get("line1_widgets", []) or []) if config else set()
     line2_ids = set(config.get("line2_widgets", []) or []) if config else set()
     if os.environ.get("CLAUDE_PULSE_FORCE_SINGLE_LINE"):
+        line1_ids = set()
         line2_ids = set()
-    if line2_ids:
+    if line1_ids:
+        row1 = " | ".join(p[2] for p in parts if p[1] in line1_ids)
+        row2 = " | ".join(p[2] for p in parts if p[1] not in line1_ids)
+    elif line2_ids:
         row1 = " | ".join(p[2] for p in parts if p[1] not in line2_ids)
         row2 = " | ".join(p[2] for p in parts if p[1] in line2_ids)
-        if row1 and row2:
-            line = f"{row1}\n{row2}"
-        elif row2:
-            line = row2
-        else:
-            line = row1
     else:
-        line = " | ".join(p[2] for p in parts)
+        row1 = " | ".join(p[2] for p in parts)
+        row2 = ""
+    if row1 and row2:
+        line = f"{row1}\n{row2}"
+    elif row2:
+        line = row2
+    else:
+        line = row1
 
     # Staleness indicator
     if show.get("staleness", True) and cache_age is not None:
