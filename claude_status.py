@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code status line — reads usage data from Claude Code's stdin and displays real-time bars."""
 
-VERSION = "3.2.0-fork.4"
+VERSION = "3.2.0-fork.5"
 
 import json
 import math
@@ -79,6 +79,7 @@ BRIGHT_WHITE = "\033[97m"
 BRIGHT_GREEN = "\033[92m"
 BRIGHT_YELLOW = "\033[93m"
 BRIGHT_RED = "\033[91m"
+WARN_ORANGE = "\033[38;5;208m"  # 256-colour vivid orange — medium-warning tier
 ORANGE_256 = "\033[38;5;208m"
 BRIGHT_ORANGE_256 = "\033[38;5;214m"
 PRIDE_VIOLET = "\033[38;5;135m"
@@ -1793,14 +1794,14 @@ def bar_colour(pct, theme):
 
     Warning thresholds override the theme so usage indicators read as warnings
     consistently across themes:
-      >=80%  → saturated RED   (critical — same red as effortLevel "max")
-      >=50%  → BRIGHT_RED      (faded warning — same red as effortLevel "xh")
-      < 50%  → theme["low"]    (theme-coloured normal range)
+      >=80%  → saturated RED    (critical — same red as effortLevel "max")
+      >=50%  → WARN_ORANGE      (medium warning — same orange as effortLevel "xh")
+      < 50%  → theme["low"]     (theme-coloured normal range)
     """
     if pct >= 80:
         return RED
     if pct >= 50:
-        return BRIGHT_RED
+        return WARN_ORANGE
     return theme["low"]
 
 
@@ -1808,13 +1809,13 @@ def section_threshold_colour(pct, theme):
     """Return ANSI colour for a whole section's text at default thresholds.
 
     Same warning palette as bar_colour:
-      >=80% → RED, >=50% → BRIGHT_RED, < 50% → "" (fall back to text_color).
+      >=80% → RED, >=50% → WARN_ORANGE, < 50% → "" (fall back to text_color).
     Caller is responsible for emitting RESET after.
     """
     if pct >= 80:
         return RED
     if pct >= 50:
-        return BRIGHT_RED
+        return WARN_ORANGE
     return ""
 
 
@@ -3898,13 +3899,13 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             return ""
         effort = _sanitize(effort)
         short = {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh", "max": "mx"}.get(effort, effort[:2])
-        # Heaviest tiers are flagged as warnings:
-        #   xh → bright red (faded warning — high but not max)
-        #   mx → bold + saturated red (peak — same red as the >=80% bar threshold)
+        # Heaviest tiers flagged as warnings, palette aligned with bar thresholds:
+        #   xh → orange (medium-warning — high but not max; same as >=50% bar)
+        #   mx → bold + saturated red (peak — same as >=80% bar)
         if effort == "max":
             return f"{BOLD}{RED}{short}{RESET}"
         if effort == "xhigh":
-            return f"{BRIGHT_RED}{short}{RESET}"
+            return f"{WARN_ORANGE}{short}{RESET}"
         return short
 
     if stdin_ctx and show.get("model", True):
