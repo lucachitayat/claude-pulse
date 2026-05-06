@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code status line — reads usage data from Claude Code's stdin and displays real-time bars."""
 
-VERSION = "3.1.0"
+VERSION = "3.2.0-fork.0"
 
 import json
 import math
@@ -782,9 +782,29 @@ def _atomic_json_write(filepath, data, indent=2):
 # Config
 # ---------------------------------------------------------------------------
 
+def _claude_config_dir():
+    """Return the active Claude Code profile dir, honouring CLAUDE_CONFIG_DIR.
+
+    When running inside a multi-profile setup (CLAUDE_CONFIG_DIR set by the
+    profile wrapper), pulse reads/writes from that dir's nested xdg-* trees
+    and reads Claude Code state (settings.json, projects/, .credentials.json)
+    from the profile dir directly. Single-profile users see the legacy
+    ~/.claude path.
+    """
+    return Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
+
+
 def get_config_path():
-    """Return path to user config — stored under XDG_CONFIG_HOME, outside the repo."""
-    if sys.platform == "win32":
+    """Return path to user config.
+
+    Resolution order:
+      1. CLAUDE_CONFIG_DIR set → $CLAUDE_CONFIG_DIR/xdg-config/claude-status/
+      2. Win32 → %LOCALAPPDATA%/claude-status/
+      3. Otherwise → $XDG_CONFIG_HOME/claude-status/ (default ~/.config/claude-status/)
+    """
+    if "CLAUDE_CONFIG_DIR" in os.environ:
+        base = Path(os.environ["CLAUDE_CONFIG_DIR"]) / "xdg-config"
+    elif sys.platform == "win32":
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     else:
         base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -929,7 +949,7 @@ def _cleanup_hooks():
     marker = state_dir / "hooks_cleaned"
     if marker.exists():
         return
-    settings_path = Path.home() / ".claude" / "settings.json"
+    settings_path = _claude_config_dir() / "settings.json"
     try:
         with open(settings_path, "r", encoding="utf-8") as f:
             settings = json.load(f)
@@ -1080,8 +1100,8 @@ def hook_refresh(tool_name_arg):
 
 
 def install_hooks():
-    """Install a PostToolUse hook into ~/.claude/settings.json."""
-    settings_path = Path.home() / ".claude" / "settings.json"
+    """Install a PostToolUse hook into the active profile's settings.json."""
+    settings_path = _claude_config_dir() / "settings.json"
     script_path = _win_portable_path(Path(__file__).resolve())
     python_cmd = _get_python_cmd()
     settings = {}
@@ -1132,8 +1152,16 @@ def install_hooks():
 # ---------------------------------------------------------------------------
 
 def get_state_dir():
-    """Return the shared state/cache directory."""
-    if sys.platform == "win32":
+    """Return the state/cache directory.
+
+    Resolution order matches get_config_path() — multi-profile aware:
+      1. CLAUDE_CONFIG_DIR set → $CLAUDE_CONFIG_DIR/xdg-cache/claude-status/
+      2. Win32 → %LOCALAPPDATA%/claude-status/
+      3. Otherwise → $XDG_CACHE_HOME/claude-status/ (default ~/.cache/claude-status/)
+    """
+    if "CLAUDE_CONFIG_DIR" in os.environ:
+        base = Path(os.environ["CLAUDE_CONFIG_DIR"]) / "xdg-cache"
+    elif sys.platform == "win32":
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     else:
         base = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
@@ -1646,8 +1674,8 @@ def _authorized_request(url, token, headers=None, data=None, method=None, timeou
 
 def _read_credential_data():
     """Read raw credential data from file or macOS Keychain. Returns (dict, source)."""
-    # 1. File-based (~/.claude/.credentials.json)
-    creds_path = Path.home() / ".claude" / ".credentials.json"
+    # 1. File-based ($CLAUDE_CONFIG_DIR/.credentials.json, falling back to ~/.claude/)
+    creds_path = _claude_config_dir() / ".credentials.json"
     try:
         with open(creds_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -2643,8 +2671,7 @@ def _scan_session_costs():
     Returns a dict with per-model cost/token breakdown, totals, session count,
     and the earliest file mtime seen.
     """
-    home = Path.home()
-    projects_dir = home / ".claude" / "projects"
+    projects_dir = _claude_config_dir() / "projects"
 
     models: dict = {}
     total_cost_usd = 0.0
@@ -2802,8 +2829,7 @@ def _scan_session_costs_window(window_seconds):
     Skips files whose mtime is older than the window. Within candidate files,
     each entry's `timestamp` (ISO 8601, UTC) is checked against the cutoff.
     """
-    home = Path.home()
-    projects_dir = home / ".claude" / "projects"
+    projects_dir = _claude_config_dir() / "projects"
     cutoff = time.time() - window_seconds
     total_cost_usd = 0.0
     total_tokens = 0
@@ -3856,7 +3882,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         effort = os.environ.get("CLAUDE_CODE_EFFORT_LEVEL", "")
         if not effort or effort == "unset":
             try:
-                with open(Path.home() / ".claude" / "settings.json", "r", encoding="utf-8") as f:
+                with open(_claude_config_dir() / "settings.json", "r", encoding="utf-8") as f:
                     effort = (json.load(f).get("effortLevel") or "")
             except (FileNotFoundError, json.JSONDecodeError, OSError):
                 return ""
@@ -4179,7 +4205,7 @@ def _get_python_cmd():
 
 
 def install_status_line():
-    settings_path = Path.home() / ".claude" / "settings.json"
+    settings_path = _claude_config_dir() / "settings.json"
     script_path = _win_portable_path(Path(__file__).resolve())
     python_cmd = _get_python_cmd()
 
