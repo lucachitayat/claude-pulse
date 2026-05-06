@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code status line — reads usage data from Claude Code's stdin and displays real-time bars."""
 
-VERSION = "3.2.0-fork.2"
+VERSION = "3.2.0-fork.3"
 
 import json
 import math
@@ -3890,9 +3890,9 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             return ""
         effort = _sanitize(effort)
         short = {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh", "max": "mx"}.get(effort, effort[:2])
-        # max is the heaviest tier — flag it visually so it stands out.
+        # max is the heaviest tier — flag it as a warning so it stands out.
         if effort == "max":
-            return f"{RED}{short}{RESET}"
+            return f"{BOLD}{BRIGHT_RED}{short}{RESET}"
         return short
 
     if stdin_ctx and show.get("model", True):
