@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code status line — reads usage data from Claude Code's stdin and displays real-time bars."""
 
-VERSION = "3.2.0-fork.3"
+VERSION = "3.2.0-fork.4"
 
 import json
 import math
@@ -1789,24 +1789,32 @@ def get_theme_colours(theme_name):
 
 
 def bar_colour(pct, theme):
-    """Return ANSI colour based on usage percentage using theme colours."""
+    """Return ANSI colour based on usage percentage.
+
+    Warning thresholds override the theme so usage indicators read as warnings
+    consistently across themes:
+      >=80%  → saturated RED   (critical — same red as effortLevel "max")
+      >=50%  → BRIGHT_RED      (faded warning — same red as effortLevel "xh")
+      < 50%  → theme["low"]    (theme-coloured normal range)
+    """
     if pct >= 80:
-        return theme["high"]
+        return RED
     if pct >= 50:
-        return theme["mid"]
+        return BRIGHT_RED
     return theme["low"]
 
 
 def section_threshold_colour(pct, theme):
     """Return ANSI colour for a whole section's text at default thresholds.
 
-    Empty string under 50% so the section falls back to the global text_color
-    set by apply_text_color. Caller is responsible for emitting RESET after.
+    Same warning palette as bar_colour:
+      >=80% → RED, >=50% → BRIGHT_RED, < 50% → "" (fall back to text_color).
+    Caller is responsible for emitting RESET after.
     """
     if pct >= 80:
-        return theme["high"]
+        return RED
     if pct >= 50:
-        return theme["mid"]
+        return BRIGHT_RED
     return ""
 
 
@@ -3890,9 +3898,13 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             return ""
         effort = _sanitize(effort)
         short = {"low": "lo", "medium": "md", "high": "hi", "xhigh": "xh", "max": "mx"}.get(effort, effort[:2])
-        # max is the heaviest tier — flag it as a warning so it stands out.
+        # Heaviest tiers are flagged as warnings:
+        #   xh → bright red (faded warning — high but not max)
+        #   mx → bold + saturated red (peak — same red as the >=80% bar threshold)
         if effort == "max":
-            return f"{BOLD}{BRIGHT_RED}{short}{RESET}"
+            return f"{BOLD}{RED}{short}{RESET}"
+        if effort == "xhigh":
+            return f"{BRIGHT_RED}{short}{RESET}"
         return short
 
     if stdin_ctx and show.get("model", True):
