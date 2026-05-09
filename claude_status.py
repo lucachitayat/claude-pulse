@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code status line — reads usage data from Claude Code's stdin and displays real-time bars."""
 
-VERSION = "3.2.0-fork.5"
+VERSION = "3.2.0-fork.6"
 
 import json
 import math
@@ -186,6 +186,11 @@ STALENESS_RED = 600
 CONTEXT_PRESSURE_PCT = 70
 CONTEXT_PRESSURE_CRITICAL = 90
 CONTEXT_PRESSURE_VELOCITY = 5.0
+# Ctx bar warning palette runs hotter than other bars: orange at 25%, red at 50%.
+# Rationale: context pressure compounds with conversation length, so visual warnings
+# need to fire well before the hard limit (vs SL/WL where 50/80 maps to time-of-day risk).
+CTX_BAR_ORANGE_PCT = 25
+CTX_BAR_RED_PCT = 50
 
 # ---------------------------------------------------------------------------
 # Animation constants
@@ -1789,32 +1794,33 @@ def get_theme_colours(theme_name):
     return THEMES.get(theme_name, THEMES["default"])
 
 
-def bar_colour(pct, theme):
+def bar_colour(pct, theme, red_at=80, orange_at=50):
     """Return ANSI colour based on usage percentage.
 
     Warning thresholds override the theme so usage indicators read as warnings
-    consistently across themes:
-      >=80%  → saturated RED    (critical — same red as effortLevel "max")
-      >=50%  → WARN_ORANGE      (medium warning — same orange as effortLevel "xh")
-      < 50%  → theme["low"]     (theme-coloured normal range)
+    consistently across themes. Default palette (80/50) suits time-bounded bars
+    (SL/WL); callers may pass tighter thresholds (e.g. Ctx uses 50/25).
+      >= red_at    → saturated RED    (critical — same red as effortLevel "max")
+      >= orange_at → WARN_ORANGE      (medium warning — same orange as effortLevel "xh")
+      below       → theme["low"]     (theme-coloured normal range)
     """
-    if pct >= 80:
+    if pct >= red_at:
         return RED
-    if pct >= 50:
+    if pct >= orange_at:
         return WARN_ORANGE
     return theme["low"]
 
 
-def section_threshold_colour(pct, theme):
-    """Return ANSI colour for a whole section's text at default thresholds.
+def section_threshold_colour(pct, theme, red_at=80, orange_at=50):
+    """Return ANSI colour for a whole section's text at threshold breakpoints.
 
-    Same warning palette as bar_colour:
-      >=80% → RED, >=50% → WARN_ORANGE, < 50% → "" (fall back to text_color).
-    Caller is responsible for emitting RESET after.
+    Same palette as bar_colour; thresholds default to 80/50 but accept overrides
+    for sections like Ctx that need a hotter scale. Returns "" below orange_at
+    so callers fall back to text_color. Caller emits RESET after.
     """
-    if pct >= 80:
+    if pct >= red_at:
         return RED
-    if pct >= 50:
+    if pct >= orange_at:
         return WARN_ORANGE
     return ""
 
@@ -3656,6 +3662,9 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 celebrating = _check_celebration(pct, anim_state)
             bar = make_bar(pct, theme, plain=bar_plain, width=bw, bar_style=bstyle,
                            anim_mode=anim_mode, flash_color=weekly_flash, config=config)
+            wl_bw = max(2, bw // 2)  # half-width to match SL bar
+            bar_compact = make_bar(pct, theme, plain=bar_plain, width=wl_bw, bar_style=bstyle,
+                                   anim_mode=anim_mode, flash_color=weekly_flash, config=config)
             weekly_reset_str = ""
             if show.get("weekly_timer", True):
                 wt_fmt = config.get("weekly_timer_format", DEFAULT_WEEKLY_TIMER_FORMAT)
@@ -3683,8 +3692,10 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 parts.append((_w, "weekly", f"{bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
             elif layout == "percent-first":
                 parts.append((_w, "weekly", f"{pct:.0f}%{pace_str} {bar}{weekly_reset_str}"))
-            else:
-                parts.append((_w, "weekly", f"Weekly {bar} {pct:.0f}%{pace_str}{weekly_reset_str}"))
+            else:  # standard — mirror SL compact shape: "WL: NN% bar reset"
+                sc = section_threshold_colour(pct, theme)
+                ec = RESET if sc else ""
+                parts.append((_w, "weekly", f"{sc}WL: {pct:.0f}%{pace_str}{ec} {bar_compact}{sc}{weekly_reset_str}{ec}"))
 
     # Opus weekly limit
     if show.get("opus", True):
@@ -3780,7 +3791,10 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         if ctx_pct is not None:
             ctx_bw = max(2, bw // 2)  # half-width vs other bars
             ctx_bar = make_bar(ctx_pct, theme, plain=bar_plain, width=ctx_bw, bar_style=bstyle,
-                               anim_mode=anim_mode, config=config)
+                               anim_mode=anim_mode,
+                               flash_color=(None if bar_plain else bar_colour(
+                                   ctx_pct, theme, red_at=CTX_BAR_RED_PCT, orange_at=CTX_BAR_ORANGE_PCT)),
+                               config=config)
             ctx_fmt = config.get("context_format", "percent")
             ctx_used = stdin_ctx.get("context_used")
             ctx_limit = stdin_ctx.get("context_limit")
@@ -3808,7 +3822,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             elif layout == "percent-first":
                 parts.append((_cx, "context", f"{pct_label}{ctx_warning_suffix} {ctx_bar}"))
             else:
-                cx_sc = section_threshold_colour(ctx_pct, theme)
+                cx_sc = section_threshold_colour(ctx_pct, theme, red_at=CTX_BAR_RED_PCT, orange_at=CTX_BAR_ORANGE_PCT)
                 cx_ec = RESET if cx_sc else ""
                 if ctx_warning_label:
                     parts.append((_cx, "context", f"{ctx_warning_label} {ctx_bar} {cx_sc}{pct_label}{cx_ec}{ctx_warning_suffix}"))
