@@ -900,6 +900,7 @@ def load_config():
     peak.setdefault("enabled", True)
     peak.setdefault("start", "13:00")
     peak.setdefault("end", "19:00")
+    peak.setdefault("weekdays_only", True)
     data["peak_hours"] = peak
     show = data.get("show", {})
     for key, default in DEFAULT_SHOW.items():
@@ -2348,6 +2349,10 @@ def _check_peak_hours(config):
       In peak:      '⚡ Peak 2h'
       Approaching:  '⚡ 45m'
       Off-peak:     '✓ Off-Peak'
+
+    Per Anthropic's published policy, peak applies on weekdays only — Saturdays
+    and Sundays are always off-peak. Users can opt out by setting
+    peak_hours.weekdays_only = false in their config.
     """
     peak = config.get("peak_hours", {})
     if not peak.get("enabled", True):
@@ -2358,9 +2363,13 @@ def _check_peak_hours(config):
         clock = config.get("clock_format", "12h")
         display_mode = peak.get("display", DEFAULT_PEAK_DISPLAY)
         minimal = display_mode == "minimal"
+        weekdays_only = peak.get("weekdays_only", True)
         sh, sm = int(start_str.split(":")[0]), int(start_str.split(":")[1])
         eh, em = int(end_str.split(":")[0]), int(end_str.split(":")[1])
         now = datetime.now()
+        # Mon=0..Fri=4 weekdays; Sat=5, Sun=6 weekends.
+        if weekdays_only and now.weekday() >= 5:
+            return False, "✓ Off-Peak" if minimal else "Off-Peak ✓"
         now_mins = now.hour * 60 + now.minute
         start_mins = sh * 60 + sm
         end_mins = eh * 60 + em
