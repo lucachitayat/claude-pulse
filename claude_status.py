@@ -3955,6 +3955,32 @@ def install_status_line():
     utf8_print("Tip: use --animate on for always-on rainbow animation.")
 
 
+def install_pulse_command():
+    """Copy the /pulse slash command into the user's Claude commands dir.
+
+    The shell installers already do this, but running ``--install`` directly
+    used to set up the status line while leaving ``/pulse`` uninstalled -- the
+    meter worked yet the command silently did nothing.  Making --install
+    self-sufficient closes that gap no matter how the user installed.
+    """
+    source = Path(__file__).resolve().parent / "pulse.md"
+    if not source.exists():
+        utf8_print("Note: pulse.md not found next to claude_status.py; skipped installing the /pulse command.")
+        utf8_print("      Re-run the full installer (install.sh / install.ps1) to add it.")
+        return
+
+    commands_dir = Path.home() / ".claude" / "commands"
+    dest = commands_dir / "pulse.md"
+    try:
+        _secure_mkdir(commands_dir)
+        shutil.copyfile(source, dest)
+    except OSError as e:
+        utf8_print(f"Note: could not install the /pulse command: {e}")
+        return
+
+    utf8_print(f"Installed /pulse command to {dest}")
+
+
 # ---------------------------------------------------------------------------
 # CLI commands
 # ---------------------------------------------------------------------------
@@ -4312,6 +4338,7 @@ def main():
 
     if "--install" in args:
         install_status_line()
+        install_pulse_command()
         return
 
     if "--preset" in args:
