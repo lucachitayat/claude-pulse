@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code status line — reads usage data from Claude Code's stdin and displays real-time bars."""
 
-VERSION = "3.2.0-fork.6"
+VERSION = "3.2.0-fork.7"
 
 import json
 import math
@@ -398,6 +398,10 @@ DEFAULT_SHOW = {
     "context": True,
     "timer": True,
     "weekly_timer": True,
+    # Per-section bar visuals (toggle the ━─ progress bar without dropping the section)
+    "session_bar": True,
+    "weekly_bar": True,
+    "context_bar": True,
     # Info line
     "cost": True,
     "model": True,
@@ -2028,7 +2032,7 @@ def format_reset_time(resets_at_str):
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         if hours > 0:
-            return f"{hours}h{minutes:02d}m"
+            return f"{hours}h{minutes:02d}"
         return f"{minutes}m"
     except (ValueError, TypeError):
         return None
@@ -2331,8 +2335,8 @@ def _format_cost(stdin_ctx, config):
     rate, code = _get_exchange_rate(currency)
     converted = cost_val * rate
     if code == "USD":
-        return f"${converted:.1f}"
-    return f"{currency}{converted:.1f}"
+        return f"${converted:.0f}"
+    return f"{currency}{converted:.0f}"
 
 
 def _get_context_history_path():
@@ -3570,7 +3574,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
         if stdin_ctx and show.get("context", True):
             num_bars += 1
         # Per-bar overhead: label + space + space + pct + timer ≈ 18 chars
-        # Separators between sections: " | " = 3 chars each
+        # Separators between sections: "|" = 3 chars each
         # Trailing fixed items (model name, update/plan indicators) ≈ 15 chars
         overhead = num_bars * 18 + max(num_bars - 1, 0) * 3 + 15
         max_bar_width = max(2, (effective_width - overhead) // max(num_bars, 1))
@@ -3636,7 +3640,8 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                     reset_str = f" \u00b7{reset}"
                 sc = section_threshold_colour(pct, theme)
                 ec = RESET if sc else ""
-                parts.append((_s, "session", f"{sc}{label} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{ec} {bar}{sc}{reset_str}{ec}"))
+                bar_field = f" {bar}" if show.get("session_bar", True) else ""
+                parts.append((_s, "session", f"{sc}{label} {pct:.0f}%{burn_str}{pace_str}{spark_str}{runway_str}{ec}{bar_field}{sc}{reset_str}{ec}"))
         else:
             _s = _pri("session")
             bar = make_bar(0, theme, plain=bar_plain, width=bw, bar_style=bstyle)
@@ -3824,10 +3829,11 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
             else:
                 cx_sc = section_threshold_colour(ctx_pct, theme, red_at=CTX_BAR_RED_PCT, orange_at=CTX_BAR_ORANGE_PCT)
                 cx_ec = RESET if cx_sc else ""
+                ctx_bar_field = f"{ctx_bar} " if show.get("context_bar", True) else ""
                 if ctx_warning_label:
-                    parts.append((_cx, "context", f"{ctx_warning_label} {ctx_bar} {cx_sc}{pct_label}{cx_ec}{ctx_warning_suffix}"))
+                    parts.append((_cx, "context", f"{ctx_warning_label} {ctx_bar_field}{cx_sc}{pct_label}{cx_ec}{ctx_warning_suffix}"))
                 else:
-                    parts.append((_cx, "context", f"{cx_sc}Ctx{cx_ec} {ctx_bar} {cx_sc}{pct_label}{cx_ec}"))
+                    parts.append((_cx, "context", f"{cx_sc}Ctx{cx_ec} {ctx_bar_field}{cx_sc}{pct_label}{cx_ec}"))
 
     # Cost ticker
     if stdin_ctx and show.get("cost", True):
@@ -3933,7 +3939,7 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
                 if show.get("effort", True):
                     es = _get_effort_short()
                     if es:
-                        model = f"{model}-{es}"
+                        model = f"{model}{es}"
                 parts.append((_pri("model"), "model", model))
     elif show.get("effort", True):
         # Model hidden but effort wanted — render effort standalone
@@ -4050,14 +4056,15 @@ def build_status_line(usage, plan, config=None, stdin_ctx=None, cache_age=None):
     if os.environ.get("CLAUDE_PULSE_FORCE_SINGLE_LINE"):
         line1_ids = set()
         line2_ids = set()
+    _sep = "|"
     if line1_ids:
-        row1 = " | ".join(p[2] for p in parts if p[1] in line1_ids)
-        row2 = " | ".join(p[2] for p in parts if p[1] not in line1_ids)
+        row1 = _sep.join(p[2] for p in parts if p[1] in line1_ids)
+        row2 = _sep.join(p[2] for p in parts if p[1] not in line1_ids)
     elif line2_ids:
-        row1 = " | ".join(p[2] for p in parts if p[1] not in line2_ids)
-        row2 = " | ".join(p[2] for p in parts if p[1] in line2_ids)
+        row1 = _sep.join(p[2] for p in parts if p[1] not in line2_ids)
+        row2 = _sep.join(p[2] for p in parts if p[1] in line2_ids)
     else:
-        row1 = " | ".join(p[2] for p in parts)
+        row1 = _sep.join(p[2] for p in parts)
         row2 = ""
     if row1 and row2:
         line = f"{row1}\n{row2}"
@@ -4157,7 +4164,7 @@ def _wrap_line(line, config):
             return line
 
         # Split on the rendered separator
-        segments = line.split(" | ")
+        segments = line.split("|")
         if len(segments) < 2:
             return _truncate_line(line, config)
 
@@ -4165,7 +4172,7 @@ def _wrap_line(line, config):
         line1_parts = [segments[0]]
         rest = segments[1:]
         for seg in rest:
-            candidate = " | ".join(line1_parts + [seg])
+            candidate = "|".join(line1_parts + [seg])
             if _visible_len(candidate) <= max_visible:
                 line1_parts.append(seg)
             else:
@@ -4176,8 +4183,8 @@ def _wrap_line(line, config):
         if not line2_parts:
             return _truncate_line(line, config)
 
-        row1 = " | ".join(line1_parts)
-        row2 = " | ".join(line2_parts)
+        row1 = "|".join(line1_parts)
+        row2 = "|".join(line2_parts)
         # Truncate each row individually as a safety net
         row1 = _truncate_line(row1, config)
         row2 = _truncate_line(row2, config)
